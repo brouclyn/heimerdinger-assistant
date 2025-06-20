@@ -1,5 +1,6 @@
 # Fichier : app.py
 # Description : Correction de l'alerte de dépréciation pour st.image.
+print("--- DÉMARRAGE DE L'APPLICATION V4 ---")
 
 import streamlit as st
 import random
