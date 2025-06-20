@@ -1,16 +1,19 @@
 # Fichier : app.py
-# Description : Version complète avec toutes les fonctionnalités, y compris le mini-jeu Smite.
+# Description : Version complète et finale avec toutes les fonctionnalités et le style.
 
 import streamlit as st
 import random
 import time
-from config import model
+from config import get_model
 
 # --- Imports depuis les autres fichiers ---
 from gemini_logic import call_gemini_with_tools, get_champion_data, generate_ultimate_bravery_challenge, get_draft_suggestion
 from lol_api import get_all_champions_list
 from rag_handler import create_vector_store, query_rag_system
-from pdf_generator import generate_pdf_from_content
+# Note : on n'importe plus generate_pdf_from_content directement ici
+
+# --- Initialisation du modèle ---
+model = get_model()
 
 # --- Fonction pour charger notre CSS personnalisé ---
 def local_css(file_name):
@@ -26,16 +29,15 @@ RAG_KEYWORDS = ["patch", "changement", "stratégie", "guide", "équilibrage", "d
 st.set_page_config(page_title="Heimerdinger Assistant", page_icon="🧠", layout="wide")
 local_css("style.css")
 
-# --- NOUVEAUTÉ : Le Mini-Jeu d'Entraînement au Smite ---
+# --- FONCTIONS D'AFFICHAGE ---
+
 def display_smite_minigame():
     """Affiche et gère la logique du mini-jeu de timing de Smite."""
     st.header("Entraînement au Châtiment", anchor=False)
 
-    # Paramètres du jeu
     TOTAL_HEALTH = 5000
     SMITE_DAMAGE = 900
 
-    # Initialisation ou réinitialisation de l'état du jeu
     if 'game_state' not in st.session_state or st.session_state.get('game_type') != 'smite':
         st.session_state.game_state = "stopped"
         st.session_state.game_type = 'smite'
@@ -45,8 +47,6 @@ def display_smite_minigame():
         st.session_state.current_dps = 0
         st.session_state.time_for_next_dps_change = 0
 
-
-    # SVG pour le Baron Nashor
     baron_svg = """
     <svg width="100" height="100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.5 16.5C16.5 17.33 15.83 18 15 18H9C8.17 18 7.5 17.33 7.5 16.5V15H16.5V16.5ZM16.5 13.5H7.5V12C7.5 10.07 9.07 8.5 11 8.5H13C14.93 8.5 16.5 10.07 16.5 12V13.5ZM11 11.5C10.45 11.5 10 11.05 10 10.5C10 9.95 10.45 9.5 11 9.5C11.55 9.5 12 9.95 12 10.5C12 11.05 11.55 11.5 11 11.5ZM13 11.5C12.45 11.5 12 11.05 12 10.5C12 9.95 12.45 9.5 13 9.5C13.55 9.5 14 9.95 14 10.5C14 11.05 13.55 11.5 13 11.5Z" fill="#8E44AD"/>
@@ -74,19 +74,15 @@ def display_smite_minigame():
             elif st.session_state.game_state == "running":
                 now = time.time()
                 delta_t = now - st.session_state.last_frame_time
-
-                # Vérifie s'il est temps de changer le DPS pour simuler un burst
                 if now > st.session_state.time_for_next_dps_change:
-                    st.session_state.current_dps = random.randint(200, 750) # Le DPS peut baisser ou augmenter fortement
+                    st.session_state.current_dps = random.randint(200, 750)
                     st.session_state.time_for_next_dps_change = now + random.uniform(1.0, 2.5)
                     st.toast(f"💥 Burst de Dégâts ! DPS: {st.session_state.current_dps}")
 
                 damage_dealt = delta_t * st.session_state.current_dps
                 st.session_state.game_current_health -= damage_dealt
                 st.session_state.last_frame_time = now
-
                 current_health = st.session_state.game_current_health
-                
                 progress = max(0, current_health / TOTAL_HEALTH)
                 st.progress(progress, text=f"{int(current_health)} / {TOTAL_HEALTH} PV")
                 st.metric(label="Dégâts du Châtiment", value=f"{SMITE_DAMAGE} PV")
@@ -94,23 +90,18 @@ def display_smite_minigame():
                 if st.button("⚡ Châtiment !"):
                     st.session_state.game_state = "finished"
                     health_when_smited = current_health
-                    
-                    # --- NOUVELLE LOGIQUE DE RÉUSSITE ---
                     if health_when_smited > SMITE_DAMAGE:
                         st.session_state.result_message = f"🤔 **Trop tôt !** Vous avez châtié à {int(health_when_smited)} PV. Le Châtiment n'aurait pas tué le Baron !"
                     else:
                         diff = SMITE_DAMAGE - health_when_smited
-                        
                         PERFECT_MARGIN = 25
-                        SUCCESS_MARGIN = 120 # Marge légèrement augmentée pour le "trop tard"
-
+                        SUCCESS_MARGIN = 120
                         if diff <= PERFECT_MARGIN:
                             st.session_state.result_message = f"🎉 **Smite PARFAIT !** Vous avez châtié à {int(health_when_smited)} PV (différence: {int(diff)}). Vous êtes le roi de la jungle !"
                         elif diff <= SUCCESS_MARGIN:
                             st.session_state.result_message = f"👍 **Excellent Châtiment !** Vous avez châtié à {int(health_when_smited)} PV. L'objectif est sécurisé !"
                         else:
                             st.session_state.result_message = f"😭 **Trop tard !** Vous avez châtié à {int(health_when_smited)} PV. L'ennemi a eu le temps de le voler !"
-                    
                     st.rerun()
                 
                 if current_health > 0:
@@ -127,7 +118,6 @@ def display_smite_minigame():
                     st.session_state.game_state = "stopped"
                     st.rerun()
 
-# --- FONCTIONS D'AFFICHAGE ---
 def display_spells_info(data):
     st.markdown(f"## {data['champion_name']}, *{data['champion_title'].capitalize()}*")
     st.divider()
@@ -241,23 +231,13 @@ def display_draft_suggestion(data):
         st.markdown(data['analysis'])
 
 def display_message(message, message_index):
-    """Affiche un message, gère le jeu ou un bouton de téléchargement."""
     with st.chat_message(message["role"]):
         content = message["content"]
-        
         if isinstance(content, dict):
             type_de_contenu = content.get("type")
-            
-            if type_de_contenu == "smite_game":
-                display_smite_minigame()
-            elif type_de_contenu == "file_download":
-                st.download_button(
-                    label=content.get("label", "Télécharger"),
-                    data=bytes(content.get("data")),
-                    file_name=content.get("file_name", "export.pdf"),
-                    mime="application/pdf",
-                    key=f"pdf_{message_index}"
-                )
+            if type_de_contenu == "file_download":
+                st.download_button(label=content.get("label", "Télécharger"), data=bytes(content.get("data")), file_name=content.get("file_name", "export.pdf"), mime="application/pdf", key=f"pdf_{message_index}")
+            elif type_de_contenu == "smite_game": display_smite_minigame()
             elif type_de_contenu == "character_sheet": display_character_sheet(content)
             elif type_de_contenu == "spells_info": display_spells_info(content)
             elif type_de_contenu == "item_info": display_item_info(content)
@@ -337,7 +317,6 @@ for i, msg in enumerate(st.session_state.messages):
 
 if question := st.chat_input("Posez votre question sur League of Legends..."):
     st.session_state.messages.append({"role": "user", "content": question})
-    # --- Déclencheur du jeu ---
     if "jungle diff" in question.lower():
         st.session_state.messages.append({"role": "assistant", "content": {"type": "smite_game"}})
     st.rerun()
