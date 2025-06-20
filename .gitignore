@@ -14,3 +14,6 @@ VENV/
 # Fichiers de configuration IDE
 .vscode/
 .idea/
+
+# Fichiers et secrets de Streamlit
+.streamlit/
