@@ -1,5 +1,5 @@
 # Fichier : app.py
-# Description : Version complète et finale avec toutes les fonctionnalités et le style.
+# Description : Correction de l'alerte de dépréciation pour st.image.
 
 import streamlit as st
 import random
@@ -10,10 +10,7 @@ from config import get_model
 from gemini_logic import call_gemini_with_tools, get_champion_data, generate_ultimate_bravery_challenge, get_draft_suggestion
 from lol_api import get_all_champions_list
 from rag_handler import create_vector_store, query_rag_system
-# Note : on n'importe plus generate_pdf_from_content directement ici
-
-# --- Initialisation du modèle ---
-model = get_model()
+from pdf_generator import generate_pdf_from_content
 
 # --- Fonction pour charger notre CSS personnalisé ---
 def local_css(file_name):
@@ -29,8 +26,10 @@ RAG_KEYWORDS = ["patch", "changement", "stratégie", "guide", "équilibrage", "d
 st.set_page_config(page_title="Heimerdinger Assistant", page_icon="🧠", layout="wide")
 local_css("style.css")
 
-# --- FONCTIONS D'AFFICHAGE ---
+# --- Initialisation du modèle ---
+model = get_model()
 
+# --- Le Mini-Jeu d'Entraînement au Smite ---
 def display_smite_minigame():
     """Affiche et gère la logique du mini-jeu de timing de Smite."""
     st.header("Entraînement au Châtiment", anchor=False)
@@ -118,10 +117,11 @@ def display_smite_minigame():
                     st.session_state.game_state = "stopped"
                     st.rerun()
 
+# --- FONCTIONS D'AFFICHAGE ---
 def display_spells_info(data):
     st.markdown(f"## {data['champion_name']}, *{data['champion_title'].capitalize()}*")
     st.divider()
-    st.image(data['splash_url'], use_column_width='always')
+    st.image(data['splash_url'], use_container_width=True) # <-- CORRIGÉ
     st.divider()
     st.subheader("Compétences")
     all_spells = []
@@ -140,7 +140,7 @@ def display_spells_info(data):
 def display_character_sheet(data):
     st.markdown(f"# {data['name']} - *{data['title'].capitalize()}*")
     st.caption(f"ℹ️ Source : {data['source']}")
-    st.image(data['splash_url'], use_column_width='always')
+    st.image(data['splash_url'], use_container_width=True) # <-- CORRIGÉ
     st.markdown("---")
     tab_lore, tab_skills, tab_skins = st.tabs(["📖 Histoire & Relations", "✨ Compétences", "🎨 Skins"])
     with tab_lore:
@@ -235,9 +235,9 @@ def display_message(message, message_index):
         content = message["content"]
         if isinstance(content, dict):
             type_de_contenu = content.get("type")
-            if type_de_contenu == "file_download":
+            if type_de_contenu == "smite_game": display_smite_minigame()
+            elif type_de_contenu == "file_download":
                 st.download_button(label=content.get("label", "Télécharger"), data=bytes(content.get("data")), file_name=content.get("file_name", "export.pdf"), mime="application/pdf", key=f"pdf_{message_index}")
-            elif type_de_contenu == "smite_game": display_smite_minigame()
             elif type_de_contenu == "character_sheet": display_character_sheet(content)
             elif type_de_contenu == "spells_info": display_spells_info(content)
             elif type_de_contenu == "item_info": display_item_info(content)
@@ -254,7 +254,7 @@ def display_message(message, message_index):
 col1, col2, col3 = st.columns([2, 3, 2])
 with col2:
     try:
-        st.image("images/logo.png", use_column_width='auto')
+        st.image("images/logo.png", use_container_width=True) # <-- CORRIGÉ
     except FileNotFoundError:
         st.title("Heimerdinger Assistant")
         st.warning("Logo introuvable. Assurez-vous d'avoir un dossier 'images' avec 'logo.png' à l'intérieur.")
