@@ -1,5 +1,5 @@
 # Fichier : gemini_logic.py
-# Description : Ajout d'un outil dédié pour l'export direct de fiches champions en PDF.
+# Description : Version complète incluant tous les outils et logiques de l'assistant.
 
 import streamlit as st
 import requests
@@ -9,10 +9,13 @@ import random
 from google.generativeai import types
 
 # --- Imports depuis vos autres fichiers ---
-from config import model
+from config import get_model
 from lol_api import get_latest_version, get_all_champions_list, get_all_items_data, get_all_summoner_spells_data
 from rag_handler import query_rag_system
 from pdf_generator import generate_pdf_from_content
+
+# --- On initialise le modèle ---
+model = get_model()
 
 # ───── DÉCLARATION DES FONCTIONS POUR GEMINI ─────
 function_declarations = [
@@ -75,6 +78,7 @@ function_declarations = [
 
 # ─── FONCTIONS UTILITAIRES ───
 def normalize_text(text): return unidecode.unidecode(text).lower().replace("'", "").replace(".", "").replace(" ", "")
+
 def find_champion_id_by_name(champion_name):
     all_champions = get_all_champions_list()
     if not all_champions: return None
@@ -82,9 +86,11 @@ def find_champion_id_by_name(champion_name):
     for champion_id, champion_data in all_champions.items():
         if normalize_text(champion_data['name']) == normalized_input: return champion_id
     return None
+
 def clean_html(raw_html):
     cleanr = re.compile('<.*?>')
     return re.sub(cleanr, '', raw_html).replace('&nbsp;', ' ')
+
 @st.cache_data
 def get_champion_data(champion_name):
     champion_id = find_champion_id_by_name(champion_name)
@@ -96,10 +102,10 @@ def get_champion_data(champion_name):
         r.raise_for_status()
         return r.json()["data"][champion_id]
     except (requests.RequestException, KeyError): return None
+
 def get_generative_response(history, model_instance):
     response = model_instance.generate_content(history)
     return response.text.strip()
-
 
 # ───── FONCTIONS RÉELLES (OUTILS) ─────
 def get_character_sheet(champion: str):
@@ -117,26 +123,14 @@ def get_character_sheet(champion: str):
     return character_sheet
 
 def generate_champion_sheet_pdf(champion: str):
-    """Génère une fiche champion et la convertit directement en PDF."""
     st.caption(f"--- Génération du PDF pour {champion} ---")
-    
-    # 1. Obtenir les données de la fiche champion
     sheet_data = get_character_sheet(champion)
     if not isinstance(sheet_data, dict):
         return {"type": "simple_text", "content": f"Impossible de générer la fiche pour {champion}."}
-
-    # 2. Convertir ces données en PDF
     try:
         pdf_data = generate_pdf_from_content(sheet_data)
         file_name = f"fiche_{sheet_data.get('name', 'champion').replace(' ', '_')}.pdf"
-        
-        # 3. Retourner la structure pour le bouton de téléchargement
-        return {
-            "type": "file_download",
-            "data": pdf_data,
-            "file_name": file_name,
-            "label": f"Télécharger la fiche de {champion}"
-        }
+        return {"type": "file_download", "data": pdf_data, "file_name": file_name, "label": f"Télécharger la fiche de {champion}"}
     except Exception as e:
         return {"type": "simple_text", "content": f"Désolé, une erreur est survenue lors de la création du PDF : {e}"}
 
@@ -145,8 +139,7 @@ def export_to_pdf():
     last_assistant_message = None
     for message in reversed(st.session_state.messages):
         if message["role"] == "assistant":
-            if isinstance(message["content"], dict) and message["content"].get("type") == "file_download":
-                continue
+            if isinstance(message["content"], dict) and message["content"].get("type") == "file_download": continue
             last_assistant_message = message
             break
     if not last_assistant_message:
@@ -259,4 +252,3 @@ def call_gemini_with_tools(messages_history, model_instance, mode):
     except Exception as e:
         st.error(f"Une erreur est survenue avec Gemini : {e}")
         return "Désolé, une erreur est survenue."
-
