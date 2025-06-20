@@ -3,3 +3,4 @@ requests
 google-generativeai
 unidecode
 fpdf2
+python-dotenv
