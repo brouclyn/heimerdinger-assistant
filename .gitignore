@@ -1,0 +1,16 @@
+# Fichiers et dossiers de cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements virtuels
+.env
+.venv
+env/
+venv/
+ENV/
+VENV/
+
+# Fichiers de configuration IDE
+.vscode/
+.idea/

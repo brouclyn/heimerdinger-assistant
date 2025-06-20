@@ -1,0 +1,43 @@
+/* Fichier : style.css */
+/* Description : Version avec un thème clair par défaut et des boutons dorés personnalisés. */
+
+/* --- 1. Importation des polices depuis Google Fonts --- */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato&display=swap');
+
+/* --- 2. Définition des couleurs et polices --- */
+:root {
+    --primary-font: 'Lato', sans-serif;
+    --title-font: 'Cinzel', serif;
+    --accent-gold: #C89B3C; /* Doré/Bronze */
+    --button-text-color: #010A13; /* Bleu très sombre pour le texte du bouton */
+}
+
+/* --- 3. Style des titres (on garde le style LoL) --- */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--title-font);
+    color: var(--accent-gold);
+    text-transform: uppercase;
+}
+
+/* --- 4. Style des boutons --- */
+.stButton > button {
+    font-family: var(--title-font);
+    background-color: var(--accent-gold) !important; /* Fond doré rempli */
+    color: var(--button-text-color) !important; /* Texte sombre pour la lisibilité */
+    border: 2px solid var(--accent-gold);
+    border-radius: 0px;
+    padding: 10px 20px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre subtile */
+}
+
+.stButton > button:hover, .stButton > button:focus {
+    background-color: #E0B458 !important; /* Un or un peu plus clair au survol */
+    color: var(--button-text-color) !important;
+    border-color: #E0B458 !important;
+    box-shadow: 0 6px 12px rgba(200, 155, 60, 0.3); /* Lueur dorée */
+    transform: translateY(-2px); /* Léger effet de soulèvement */
+}
+
+/* On ne touche plus au reste pour garder le thème Streamlit par défaut (blanc) */
